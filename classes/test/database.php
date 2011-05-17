@@ -1,8 +1,11 @@
 <?php
 class Test_Database_Query extends Kohana_Database_Query{
 		public function execute($db = null){
-			$db  = Test_Database::instance()->execute($this); 
+			if(Test_Database::instance()->env() == 'test'){
+				$db  = Test_Database::instance()->execute($this); 
 
+			}
+			
 			return parent::execute($db);
 		}
 
@@ -12,34 +15,33 @@ class Test_Database_Query extends Kohana_Database_Query{
 	class Test_Database_Query_Builder_Select extends JP_Database_Query_Builder_Select{
 
 		public function compile(Database $db){
-			$db = Test_Database::instance()->getMockDatabase();
+			if(Test_Database::instance()->env() == 'test'){
+				$db = Test_Database::instance()->getMockDatabase();
 
+			}
 			return parent::compile($db);
 
 		}
 
 	}
 	class Database_Query_Builder_Select extends Test_Database_Query_Builder_Select{}
-	
-	require_once Kohana::find_file('tests','kohana/DatabaseTest');
 
 	class Test_Database extends Test_Database_Core{
 		protected static $_phpunit = null;
 
-		public static function instance(){
-			
+		public static function instance($env = null){
 			if(parent::$current){
-				self::$_phpunit = new Kohana_DatabaseTest;
+				self::$_phpunit = new PHPUnit_Stub;
 
 			}
 
-			return parent::instance();
+			return parent::instance($env);
 
 
 		}
 
-		public function getMockDatabase(){
-				return self::$_phpunit->getMockDatabase();
+		public function getMockDatabase($database = 'default' , array $config = array()){
+			return  self::$_phpunit->getMockForAbstractClass('DummyDatabase', array($database,$config), '',false,true,true);
 
 		}
 
@@ -106,7 +108,7 @@ class Test_Database_Query extends Kohana_Database_Query{
 					->will(self::$_phpunit->returnValue(Result::factory(current($this->result()))));
 
 				//get the DummyDatabase Instance from Kohana_DatabaseTest
-				$db = self::$_phpunit->getMockDatabase();
+				$db = $this->getMockDatabase();
 
 				//mock the escape method to return '' when called
 				$db->expects(self::$_phpunit->any())
@@ -131,3 +133,22 @@ class Test_Database_Query extends Kohana_Database_Query{
 
 
 	}
+
+	class PHPUnit_Stub extends PHPUnit_Framework_TestCase{}
+
+abstract class DummyDatabase extends Database{
+
+	public function escape($value)
+	{
+		if(is_int($value)){
+			return $value;
+
+		}
+		else{
+			// SQL standard is to use single-quotes for all values
+			return "'$value'";
+		}
+	}
+
+}
+?>

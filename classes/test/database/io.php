@@ -19,7 +19,7 @@
 		}
 
 		public static function fetch_schema($table){
-			$path = self::$_database_path.'/'.$table.'.schema';
+			$path = Kohana::$cache_dir.'/database/'.$table.'.schema';
 			if(file_exists($path)){
 				if(!isset(self::$_schemas[$table])){
 					self::$_schemas[$table] = json_decode(file_get_contents($path),true);
@@ -30,8 +30,8 @@
 			}
 
 			throw new Kohana_Exception(
-				'The Schema file :file.schema can not be found, consider running the cache command',
-				array(':file' => $table)
+				'The Schema file :file can not be found, consider running the cache command',
+				array(':file' => $path)
 			);
 
 		}
@@ -59,14 +59,19 @@
 			$table = $table !== null?$table:self::fetch_table($field);
 			$database_path = Kohana::$cache_dir.'/database';
 			$data_path = $database_path.'/'.$table.'.data';
-			if(!isset(self::$_data[$table]) && file_exists($data_path)){
-				self::$_data[$table] = json_decode(file_get_contents($data_path),true);
+			if(file_exists($data_path)){
+				if(!isset(self::$_data[$table]) ){
+					self::$_data[$table] = json_decode(file_get_contents($data_path),true);
 
+				}
+
+				return self::$_data[$table][rand(0,count(self::$_data[$table])-1)][$field];
 			}
 
-			return self::$_data[$table][rand(0,count(self::$_data[$table])-1)][$field];
+			throw new Kohana_Exception(
+				'The data file can not be found :path', 
+				array(':path' =>$data_path));
 
-			//throw new Kohana_Exception('The data file for :table does not exist',array(':table' => $table));
 
 		}
 
@@ -81,12 +86,13 @@
 				$query = new Kohana_Database_Query(Database::SELECT,'DESCRIBE '.$table);
 				$schema = $query->execute()->as_array()->data();
 				$schema = json_encode(TArray::get_all_recursive(JP_Format::format_by($schema,'Field','distinct'),'Type'));
-				$resource = fopen($database_path.'/'.$table.'.schema','w+');
+				$filename = $database_path.'/'.$table.'.schema';
+				$resource = fopen($filename,'w+');
 				fwrite($resource,$schema);
 				fclose($resource);
+				chmod($filename,0777);
 			}	
 			
-			return $this;
 		}
 
 		public static function cache_data(){
@@ -108,12 +114,13 @@
 					
 				}
 				$data = json_encode($query->execute()->as_array()->data());
-				$resource = fopen($database_path.'/'.$table.'.data','w+');
+				$filename = $database_path.'/'.$table.'.data';
+				$resource = fopen($filename,'w+');
 				fwrite($resource,$data);
 				fclose($resource);
+				chmod($filename,0777);
 			}	
 			
-			return $this;
 
 		}
 

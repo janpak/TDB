@@ -12,6 +12,21 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	protected $_result = array();
 	protected  $_config = array();
 	public static $current =null;
+	protected $_env = 'test';
+
+
+	public function env($env = null){
+		if($env === null){
+			return $this->_env;
+
+		}
+
+		$this->_env =$env;
+
+		return $this;
+
+
+	}
 
 	/**
 	 * cache_schemas
@@ -126,11 +141,15 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	}
 
 
-	public static function instance(){
+	public static function instance($env = null){
 		if(!self::$current){
 			self::$current = new Test_Database();
 			Test_Database_IO::instance();
 
+		}
+
+		if($env !== null){
+			self::$current->env($env);
 		}
 
 		return self::$current;
