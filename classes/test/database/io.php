@@ -178,6 +178,38 @@
 
 		}
 
+		protected static function _describe($table){
+			$query = mysql_query('DESCRIBE '.$table);
+			echo mysql_error();
+			return self::_database_rows($query);
+
+		}
+
+		protected static function _database_rows($query){
+			$rows = array();
+			while($row = mysql_fetch_assoc($query)){
+				$rows[] = $row;
+
+			}
+			return $rows;
+		}
+
+		protected static function _database_connect(){
+			$config = Test_Database_Core::config_database();
+
+			$res = mysql_connect($config['hostname'],$config['username'],$config['password']);		
+			mysql_select_db($config['database']);
+
+			return $res; 
+
+		}
+
+		public static function _database_close(){
+
+			mysql_close();
+
+		}
+
 		/**
 		 * cache_schemas, for all the tables given in the config file, runs a DESCRIBE on the database and dumps the schema and writes the result to a .schema file
 		 *
@@ -185,10 +217,10 @@
 		 */
 		public function cache_schemas(){
 			$tables = Test_Database::config_tables();
+			$mysql = self::_database_connect();
 			
 			foreach($tables as $table){
-				$query = new Kohana_Database_Query(Database::SELECT,'DESCRIBE '.$table);
-				$schema = $query->execute()->as_array()->data();
+				$schema = self::_describe($table);
 				$schema = json_encode(TArray::get_all_recursive(JP_Format::format_by($schema,'Field','distinct'),'Type'));
 				$filename = self::$_database_path.$table.'.schema';
 				$resource = fopen($filename,'w+');
@@ -197,8 +229,24 @@
 				chmod($filename,0777);
 			}	
 			
+			self::_database_close();
 		}
 
+
+		protected static function _database_data($table){
+				$schema = Test_Database_IO::instance()->fetch_schema($table);
+				$query = null;
+				if(isset($schema['ship_dt'])){
+					$query = mysql_query('SELECT * FROM '.$table.' ORDER BY ship_dt DESC LIMIT 1000');
+
+				}
+				else{
+					$query = mysql_query('SELECT * FROM '.$table.' LIMIT 1000');
+					
+				}
+
+				return self::_database_rows($query);
+		}
 		/**
 		 * cache_data, for each of the tables in the config file, runs a SELECT * FROM $table LIMIT 1000 and write the result to a .data file
 		 *
@@ -207,18 +255,9 @@
 		public function cache_data(){
 			$tables = Test_Database::config_tables();
 
+			$mysql = self::_database_connect();
 			foreach($tables as $table){
-				$schema = Test_Database_IO::fetch_schema($table);
-				if(isset($schema['ship_dt'])){
-					$query = new Kohana_Database_Query(Database::SELECT,'SELECT * FROM '.$table.' ORDER BY ship_dt DESC LIMIT 1000');
-
-				}
-				else{
-					$query = new Kohana_Database_Query(Database::SELECT,'SELECT * FROM '.$table.' LIMIT 1000');
-					
-				}
-
-				$data = json_encode($query->execute()->as_array()->data());
+				$data = json_encode(self::_database_data($table));	
 				$filename = self::$_database_path.$table.'.data';
 				$resource = fopen($filename,'w+');
 				fwrite($resource,$data);

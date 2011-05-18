@@ -12,6 +12,35 @@ class TestDatabaseIOTest extends PHPUnit_Framework_TestCase{
 	}
 
 
+	public function provider_cache_schema(){
+
+		return array(
+			array('test',array('test' => array( 'some' => 'int(10)', 'wierd' => 'varchar(20)', 'schema' => 'date')))
+
+		);
+
+
+	}
+
+
+	/**
+	 * test_cache_schema, tests Test_Database_IO::cache_schema()
+	 *
+	 * @dataProvider provider_cache_schema
+	 *
+	 * @param string
+	 * @param array
+	 * @return void
+	 */
+	public function test_cache_schema($table,$expected){
+
+		Test_Database_IO::instance()->cache_schema($table);
+
+
+
+
+	}
+
 
 	public function provider_fetch_schema(){
 		return array(

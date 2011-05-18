@@ -79,7 +79,9 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	}
 
 	public static function config_database($name = 'production'){
-		return Kohana::config('database')->$name;
+		$config = Kohana::config('database')->$name;
+
+		return $config['connection'];
 
 	}
 
