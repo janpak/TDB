@@ -3,6 +3,7 @@
 class Test_Database_Function_DATE_FORMAT extends Test_Database_Function{
 
 	public function execute($field,$format){
+				$format = $this->clean_arg($format);
 				switch($format){
 					case '%M':
 						return Test_Database_Function::factory('MONTH')->execute();

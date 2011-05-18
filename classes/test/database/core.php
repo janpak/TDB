@@ -33,8 +33,8 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	 *
 	 * @see Test_Database_IO::cache_schemas
 	 */
-	public static function cache_schemas(){
-		return Test_Database_IO::cache_schemas();
+	public function cache_schemas(){
+		return Test_Database_IO::instance()->cache_schemas();
 
 	}
 
@@ -43,8 +43,8 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	 *
 	 * @see Test_Database_IO::cache_data
 	 */
-	public static function cache_data(){
-		return Test_Database_IO::cache_data();
+	public function cache_data(){
+		return Test_Database_IO::instance()->cache_data();
 
 	}
 
@@ -53,8 +53,8 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	 *
 	 * @see Test_Database_IO::fetch_data
 	 */
-	public static function fetch_data($field,$table = null){
-		return Test_Database_IO::fetch_data($field,$table);
+	public function fetch_data($field,$table = null){
+		return Test_Database_IO::instance()->fetch_data($field,$table);
 
 	}
 
@@ -63,8 +63,8 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	 *
 	 * @see Test_Database_IO::fetch_schema
 	 */
-	public static function fetch_schema($table){
-		return Test_Database_IO::fetch_schema($table);
+	public function fetch_schema($table){
+		return Test_Database_IO::instance()->fetch_schema($table);
 
 	}
 
@@ -73,8 +73,8 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	 *
 	 * @see Test_Database_IO::fetch_table
 	 */
-	public static function fetch_table($table){
-		return Test_Database_IO::fetch_table($table);
+	public function fetch_table($table){
+		return Test_Database_IO::instance()->fetch_table($table);
 
 	}
 
@@ -122,7 +122,7 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 
 		}
 		else{
-			$schema = Test_Database_IO::fetch_schema($table);
+			$schema = Test_Database_IO::instance()->fetch_schema($table);
 			$type = $schema[$field];
 			$type = self::_remove_junk($type);	
 			return $type;
@@ -144,7 +144,6 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	public static function instance($env = null){
 		if(!self::$current){
 			self::$current = new Test_Database();
-			Test_Database_IO::instance();
 
 		}
 

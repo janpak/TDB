@@ -62,7 +62,7 @@ class Test_Database_Query extends Kohana_Database_Query{
 					return;
 				}
 				elseif(empty($fields)){
-					$fields = array_keys(Test_Database_IO::fetch_schema(is_array($from)?$from[0]:$from));	
+					$fields = array_keys(Test_Database_IO::instance()->fetch_schema(is_array($from)?$from[0]:$from));	
 
 
 				}

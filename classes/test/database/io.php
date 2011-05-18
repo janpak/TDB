@@ -9,7 +9,11 @@
 		public static function instance(){
 
 			if(!self::$_current){
-				self::$_database_path = Kohana::$cache_dir.'/database';
+				self::$_database_path = Kohana::$cache_dir.'/database/';
+				if(!is_dir(self::$_database_path)){
+					mkdir($database_path,0777,TRUE);	
+
+				}
 				self::$_current = new Test_Database_IO;
 
 			}
@@ -18,8 +22,33 @@
 
 		}
 
-		public static function fetch_schema($table){
-			$path = Kohana::$cache_dir.'/database/'.$table.'.schema';
+
+		public function schema($schema = null){
+			if($schema === null){
+				return $schema;
+
+			}
+
+			self::$_schemas = $schema;
+
+			return $this;
+
+		}
+
+		public function data($data = null){
+			if($data === null){
+				return self::$_data;
+
+			}
+	
+			self::$_data = $data;
+
+			return $this;
+
+		}
+
+		public function fetch_schema($table){
+			$path = self::$_database_path.$table.'.schema';
 			if(file_exists($path)){
 				if(!isset(self::$_schemas[$table])){
 					self::$_schemas[$table] = json_decode(file_get_contents($path),true);
@@ -36,7 +65,7 @@
 
 		}
 
-	 public static function fetch_table($field){
+	 public function fetch_table($field){
 			$tables = Test_Database::config_tables();
 			foreach($tables as $table){
 				$schema = Test_Database_IO::fetch_schema($table);
@@ -53,12 +82,11 @@
 	 }
 
 
-		public static function fetch_data($field, $table = null){
+		public function fetch_data($field, $table = null){
 			$regex = '/^[a-z0-9]+\./';
 			$field = preg_replace($regex,'',$field);
 			$table = $table !== null?$table:self::fetch_table($field);
-			$database_path = Kohana::$cache_dir.'/database';
-			$data_path = $database_path.'/'.$table.'.data';
+			$data_path = self::$_database_path.$table.'.data';
 			if(file_exists($data_path)){
 				if(!isset(self::$_data[$table]) ){
 					self::$_data[$table] = json_decode(file_get_contents($data_path),true);
@@ -75,18 +103,14 @@
 
 		}
 
-		public static function cache_schemas(){
+		public function cache_schemas(){
 			$tables = Test_Database::config_tables();
-			$database_path = Kohana::$cache_dir.'/database';
-			if(!is_dir($database_path)){
-					mkdir($database_path,0777,TRUE);	
-
-			}
+			
 			foreach($tables as $table){
 				$query = new Kohana_Database_Query(Database::SELECT,'DESCRIBE '.$table);
 				$schema = $query->execute()->as_array()->data();
 				$schema = json_encode(TArray::get_all_recursive(JP_Format::format_by($schema,'Field','distinct'),'Type'));
-				$filename = $database_path.'/'.$table.'.schema';
+				$filename = self::$_database_path.$table.'.schema';
 				$resource = fopen($filename,'w+');
 				fwrite($resource,$schema);
 				fclose($resource);
@@ -95,13 +119,8 @@
 			
 		}
 
-		public static function cache_data(){
+		public function cache_data(){
 			$tables = Test_Database::config_tables();
-			$database_path = Kohana::$cache_dir.'/database';
-			if(!is_dir($database_path)){
-					mkdir($database_path,0777,TRUE);	
-
-			}
 
 			foreach($tables as $table){
 				$schema = Test_Database_IO::fetch_schema($table);
@@ -113,14 +132,14 @@
 					$query = new Kohana_Database_Query(Database::SELECT,'SELECT * FROM '.$table.' LIMIT 1000');
 					
 				}
+
 				$data = json_encode($query->execute()->as_array()->data());
-				$filename = $database_path.'/'.$table.'.data';
+				$filename = self::$_database_path.$table.'.data';
 				$resource = fopen($filename,'w+');
 				fwrite($resource,$data);
 				fclose($resource);
 				chmod($filename,0777);
 			}	
-			
 
 		}
 
