@@ -29,7 +29,7 @@ class TestDatabaseFunctionTest extends PHPUnit_Framework_TestCase{
 			array('GROUP_CONCAT(`foobar`)','GROUP_CONCAT'),
 			array('DATE_FORMAT(`foobar_date`,\'%M\')','DATE_FORMAT',array('%M')),
 			array('IF(`foobar` = \'MISC\',\'MISC\',\'foobar\'','IF'),
-			array('CAST(GROUP_CONCAT(`foobar`))','CAST')
+			array('CAST(GROUP_CONCAT(`foobar`) AS DATETIME)','CAST')
 
 		);
 

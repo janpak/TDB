@@ -70,7 +70,7 @@ class Test_Database_Function implements Test_Database_Interface_Function{
 	}
 
 	public function is_field($arg){
-		return strpos('`',$arg);
+		return strpos('`',$arg) || Test_Database_IO::instance()->fetch_table($arg);
 
 
 	}

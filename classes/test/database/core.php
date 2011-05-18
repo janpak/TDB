@@ -130,6 +130,13 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 
 	}
 
+	/**
+	 * _remove_junk, removes junk of the back of a type
+	 *
+	 * Example:
+	 * 	Given: varchar(20) unsigned
+	 * 	Returns: varchar
+	 */
 	private static function _remove_junk($type){
 		$regex = '/(\([0-9]+\)){1}[a-z\s]*$/';
 		if(preg_match($regex,$type)){
