@@ -11,17 +11,87 @@ class TestDatabaseIOTest extends PHPUnit_Framework_TestCase{
 
 	}
 
+	public function mock_test_io(){
+		return	$this->getMock('Test_Database_IO',array('_database_data','_describe','_database_rows','_database_connect','_database_close'));
+
+	}
+
+	public function provider_clean_up(){
+		return array(
+			array('testdir1'),
+			array('testdir2')
+
+			);
+
+	}
+
+	/**
+	 * test_clean_up, tests Test_Database_IO_Core::clean_up()
+	 *
+	 * @dataProvider provider_clean_up
+	 *
+	 * @param string
+	 * @return void
+	 */
+	public function test_clean_up($path){
+			$io = new Test_Database_IO;
+			$io->database_path($path);
+
+			$io->clean_up();
+
+			$this->assertFalse(is_dir($path));
+
+
+	}
+
+	public function provider_database_path(){
+		return array(
+			array('testdir1'),
+			array('testdir2')
+
+			);
+
+	}
+
+	/**
+	 * test_database_path, tests Test_Database_IO_Core::database_path()
+	 * also tests clean_up, but created a seperate test for clean up also above
+	 *
+	 * @dataProvider provider_database_path
+	 *
+	 * @param string
+	 * @return void
+	 */
+	public function test_database_path($path){
+			$io = new Test_Database_IO;
+			$io->database_path($path);
+
+			$this->assertTrue(is_dir($path));
+
+			$io->clean_up();
+
+			$this->assertFalse(is_dir($path));
+		}
+
 
 	public function provider_cache_schema(){
 
 		return array(
-			array('test',array('test' => array( 'some' => 'int(10)', 'wierd' => 'varchar(20)', 'schema' => 'date')))
+			array(
+				array('test'),
+				array('test' => array(
+					array('Field'=> 'some','Type' =>  'int(10)'),
+					array('Field' => 'wierd', 'Type' => 'varchar(20)'),
+					array('Field' => 'schema','Type' => 'date'))
+				),
+				array('test' => array('some' => 'int(10)', 'wierd' => 'varchar(20)','schema' => 'date'))
+			)
 
 		);
 
 
 	}
-
+	
 
 	/**
 	 * test_cache_schema, tests Test_Database_IO::cache_schema()
@@ -32,15 +102,74 @@ class TestDatabaseIOTest extends PHPUnit_Framework_TestCase{
 	 * @param array
 	 * @return void
 	 */
-	public function test_cache_schema($table,$expected){
+	public function test_cache_schema(array $tables, array $schemas,array $expected){
+		$io = $this->mock_test_io(); 
 
-		Test_Database_IO::instance()->cache_schema($table);
+		foreach($tables as $table){
+			$io->expects($this->any())
+				->method('_describe')
+				->will($this->returnValue($schemas[$table]));
+
+			$io->database_path('test-database')->cache_schema(array($table));
+
+			$filepath = $io->database_path().$table.'.schema';
+
+			$this->assertFileExists($filepath);
+
+			$this->assertSame($expected[$table],json_decode(file_get_contents($filepath),true));
 
 
+		}
+
+		$io->clean_up();
+
+	}
+
+
+	public function provider_cache_data(){
+
+		return array(
+			array(
+				array('test'),
+				array('test' => array(
+					array('test' => 'foo', 'test2' => 'bar'),
+					array('test3' => 'foo', 'test4' => 'bar')
+				))
+			)
+		);
 
 
 	}
 
+	/**
+	 * test_cache_data, tests Test_Database_IO::cache_data()
+	 *
+	 * @dataProvider provider_cache_data
+	 *
+	 * @param array
+	 * @return void
+	 */
+	public function test_cache_data($tables,$expected){
+		$io = $this->mock_test_io();
+
+		foreach($tables as $table){
+			$io->expects($this->any())
+				->method('_database_data')
+				->will($this->returnValue($expected[$table]));
+
+			$io->database_path('test-database')->cache_data(array($table));
+
+			$filename = $io->database_path().$table.'.data';
+			$this->assertFileExists($filename);
+
+			$this->assertSame($expected[$table],json_decode(file_get_contents($filename),true));
+
+
+		}
+
+		$io->clean_up();
+
+	}
 
 	public function provider_fetch_schema(){
 		return array(

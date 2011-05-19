@@ -1,10 +1,11 @@
 <?php
 
-	class Test_Database_IO implements Test_Database_Interface_IO{
-		protected static $_data = array();
-		protected static $_schemas = array();
-		protected static $_database_path = null;
+	class Test_Database_IO extends Test_Database_IO_Core{
+		protected  $_data = array();
+		protected  $_schemas = array();
 		protected static $_current = null;
+		
+
 
 		/**
 		 * instance, returns the Test_Database_IO instance, sets up the $_database_path
@@ -12,14 +13,9 @@
 		 * @return Test_Database_IO
 		 */
 		public static function instance(){
-
 			if(!self::$_current){
-				self::$_database_path = Kohana::$cache_dir.'/database/';
-				if(!is_dir(self::$_database_path)){
-					mkdir($database_path,0777,TRUE);	
-
-				}
 				self::$_current = new Test_Database_IO;
+				self::$_current->database_path(Kohana::$cache_dir.'/database/');
 
 			}
 
@@ -39,7 +35,7 @@
 
 			}
 
-			self::$_schemas = $schema;
+			$this->_schemas = $schema;
 
 			return $this;
 
@@ -53,11 +49,11 @@
 		 */
 		public function data($data = null){
 			if($data === null){
-				return self::$_data;
+				return $this->_data;
 
 			}
 	
-			self::$_data = $data;
+			$this->_data = $data;
 
 			return $this;
 
@@ -71,16 +67,16 @@
 		 * @return array
 		 */
 		public function fetch_schema($table){
-			$path = self::$_database_path.$table.'.schema';
+			$path = $this->database_path().$table.'.schema';
 
-			if(isset(self::$_schemas[$table])){
-				return self::$_schemas[$table];
+			if(isset($this->_schemas[$table])){
+				return $this->_schemas[$table];
 
 			}
 			else if(file_exists($path)){
-					self::$_schemas[$table] = json_decode(file_get_contents($path),true);
+					$this->_schemas[$table] = json_decode(file_get_contents($path),true);
 
-				return self::$_schemas[$table];
+				return $this->_schemas[$table];
 	
 			}
 
@@ -100,7 +96,7 @@
 		 * @return string
 		 */
 	 public function fetch_table($field){
-			$tables =empty(self::$_schemas)? Test_Database::config_tables():array_keys(self::$_schemas);
+			$tables =empty($this->_schemas)? Test_Database::config_tables():array_keys($this->_schemas);
 			foreach($tables as $table){
 				$schema = Test_Database_IO::fetch_schema($table);
 				if(isset($schema[$field])){
@@ -116,8 +112,8 @@
 	 }
 
 		private function _fetch_value($table,$row,$field){
-			if(isset(self::$_data[$table][$row][$field])){
-				return self::$_data[$table][$row][$field];	
+			if(isset($this->_data[$table][$row][$field])){
+				return $this->_data[$table][$row][$field];	
 				
 			};	
 
@@ -126,7 +122,7 @@
 		}
 
 		protected function _fill_range($table,$row_index = null,$field,$range = 1){
-				$total_rows = count(self::$_data[$table])-1;
+				$total_rows = count($this->_data[$table])-1;
 				$row_index = rand(0,$total_rows);
 				if($range > 1){
 					$values = array();
@@ -156,17 +152,17 @@
 			$field = preg_replace('/^[a-z0-9]+\./','',$field);
 
 			//get the table if none is given
-			$table = $table !== null?$table:self::fetch_table($field);
+			$table = $table !== null?$table:$this->fetch_table($field);
 
-			$data_path = self::$_database_path.$table.'.data';
+			$data_path = $this->database_path().$table.'.data';
 
 			//this if is structured like this to avoid a file io if possible
-			if(isset(self::$_data[$table])){
+			if(isset($this->_data[$table])){
 				return $this->_fill_range($table,null,$field,$range);	
 			}
 			elseif(file_exists($data_path)){
 				//get the data file off the file system
-				self::$_data[$table] = json_decode(file_get_contents($data_path),true);
+				$this->_data[$table] = json_decode(file_get_contents($data_path),true);
 
 				return $this->_fill_range($table,null,$field,$range);	
 			}
@@ -178,62 +174,7 @@
 
 		}
 
-		protected static function _describe($table){
-			$query = mysql_query('DESCRIBE '.$table);
-			echo mysql_error();
-			return self::_database_rows($query);
-
-		}
-
-		protected static function _database_rows($query){
-			$rows = array();
-			while($row = mysql_fetch_assoc($query)){
-				$rows[] = $row;
-
-			}
-			return $rows;
-		}
-
-		protected static function _database_connect(){
-			$config = Test_Database_Core::config_database();
-
-			$res = mysql_connect($config['hostname'],$config['username'],$config['password']);		
-			mysql_select_db($config['database']);
-
-			return $res; 
-
-		}
-
-		public static function _database_close(){
-
-			mysql_close();
-
-		}
-
-		/**
-		 * cache_schemas, for all the tables given in the config file, runs a DESCRIBE on the database and dumps the schema and writes the result to a .schema file
-		 *
-		 * @return void
-		 */
-		public function cache_schemas(){
-			$tables = Test_Database::config_tables();
-			$mysql = self::_database_connect();
-			
-			foreach($tables as $table){
-				$schema = self::_describe($table);
-				$schema = json_encode(TArray::get_all_recursive(JP_Format::format_by($schema,'Field','distinct'),'Type'));
-				$filename = self::$_database_path.$table.'.schema';
-				$resource = fopen($filename,'w+');
-				fwrite($resource,$schema);
-				fclose($resource);
-				chmod($filename,0777);
-			}	
-			
-			self::_database_close();
-		}
-
-
-		protected static function _database_data($table){
+		protected function _database_data($table){
 				$schema = Test_Database_IO::instance()->fetch_schema($table);
 				$query = null;
 				if(isset($schema['ship_dt'])){
@@ -245,20 +186,77 @@
 					
 				}
 
-				return self::_database_rows($query);
+				return $this->_database_rows($query);
 		}
+
+		protected function _describe($table){
+			$query = mysql_query('DESCRIBE '.$table);
+			echo mysql_error();
+			return $this->_database_rows($query);
+
+		}
+			
+		protected function _database_rows($query){
+			$rows = array();
+			while($row = mysql_fetch_assoc($query)){
+				$rows[] = $row;
+
+			}
+			return $rows;
+		}
+
+		protected function _database_connect(){
+			$config = Test_Database_Core::config_database();
+
+			$res = mysql_connect($config['hostname'],$config['username'],$config['password']);		
+			mysql_select_db($config['database']);
+
+			return $res; 
+
+		}
+	
+		public static function _database_close(){
+
+			mysql_close();
+
+		}
+
+		/**
+		 * cache_schemas, for all the tables given in the config file, runs a DESCRIBE on the database and dumps the schema and writes the result to a .schema file
+		 *
+		 * @return void
+		 */
+		public function cache_schema(array $tables = null){
+			$tables = $tables?$tables:Test_Database::config_tables();
+			$mysql = $this->_database_connect();
+			
+			foreach($tables as $table){
+				$schema = $this->_describe($table);
+				$schema = json_encode(TArray::get_all_recursive(JP_Format::format_by($schema,'Field','distinct'),'Type'));
+				$filename = $this->database_path().$table.'.schema';
+				$resource = fopen($filename,'w+');
+				fwrite($resource,$schema);
+				fclose($resource);
+				chmod($filename,0777);
+
+
+			}	
+			
+			$this->_database_close();
+		}
+
 		/**
 		 * cache_data, for each of the tables in the config file, runs a SELECT * FROM $table LIMIT 1000 and write the result to a .data file
 		 *
 		 * @return void
 		 */
-		public function cache_data(){
-			$tables = Test_Database::config_tables();
+		public function cache_data(array $tables = null){
+			$tables = $tables?$tables:Test_Database::config_tables();
 
-			$mysql = self::_database_connect();
+			$mysql = $this->_database_connect();
 			foreach($tables as $table){
-				$data = json_encode(self::_database_data($table));	
-				$filename = self::$_database_path.$table.'.data';
+				$data = json_encode($this->_database_data($table));	
+				$filename = $this->database_path().$table.'.data';
 				$resource = fopen($filename,'w+');
 				fwrite($resource,$data);
 				fclose($resource);

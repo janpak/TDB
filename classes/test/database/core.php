@@ -33,8 +33,8 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	 *
 	 * @see Test_Database_IO::cache_schemas
 	 */
-	public function cache_schemas(){
-		return Test_Database_IO::instance()->cache_schemas();
+	public function cache_schema(array $tables = null){
+		return Test_Database_IO::instance()->cache_schema($tables);
 
 	}
 
@@ -43,8 +43,8 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	 *
 	 * @see Test_Database_IO::cache_data
 	 */
-	public function cache_data(){
-		return Test_Database_IO::instance()->cache_data();
+	public function cache_data(array $tables = null){
+		return Test_Database_IO::instance()->cache_data($tables);
 
 	}
 
