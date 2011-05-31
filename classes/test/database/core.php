@@ -181,7 +181,7 @@ class Test_Database_Core implements Test_Database_Interface_IO{
 	protected function _generate_row($fields){
 		$row = array();
 		foreach($fields as $alias =>$field){
-			$row[$alias] = Test_Database_Function::is_function($field)? Test_Database_Function::run($field):Test_Database_IO::fetch_data($field);
+			$row[$alias] = Test_Database_Function::is_function($field)? Test_Database_Function::run($field):Test_Database_IO::instance()->fetch_data($field);
 
 		}
 		return $row;

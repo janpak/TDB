@@ -69,15 +69,17 @@
 		public function fetch_schema($table){
 			$path = $this->database_path().$table.'.schema';
 
+			if(is_array($table)) throw new Kohana_Exception('Given an array for the table, specify a single entity');
+
 			if(isset($this->_schemas[$table])){
 				return $this->_schemas[$table];
 
 			}
 			else if(file_exists($path)){
-					$this->_schemas[$table] = json_decode(file_get_contents($path),true);
+				$this->_schemas[$table] = json_decode(file_get_contents($path),true);
 
 				return $this->_schemas[$table];
-	
+
 			}
 
 			throw new Kohana_Exception(
@@ -91,14 +93,13 @@
 		 * fetch_table, fetches a table given a field
 		 * finds the first table that has the given field
 		 *
-		 *
 		 * @param string
 		 * @return string
 		 */
-	 public function fetch_table($field){
-			$tables =empty($this->_schemas)? Test_Database::config_tables():array_keys($this->_schemas);
+		public function fetch_table($field){
+			$tables =Test_Database::config_tables();
 			foreach($tables as $table){
-				$schema = Test_Database_IO::fetch_schema($table);
+				$schema = Test_Database_IO::instance()->fetch_schema($table);
 				if(isset($schema[$field])){
 					return $table; 
 
@@ -109,27 +110,34 @@
 				'A table can not be found with the field :field', 
 				array(':field' =>$field));
 
-	 }
+		}
 
 		private function _fetch_value($table,$row,$field){
-			if(isset($this->_data[$table][$row][$field])){
-				return $this->_data[$table][$row][$field];	
-				
-			};	
+			try{
+				if(count($this->_data[$table])){
+					return $this->_data[$table][$row][$field];	
+				}
+				return null;
 
-			throw new Kohana_Exception('The field: :field does not exist in table: :table and row: :row',array(':field' => $field,':table' => $table, ':row' => $row));
+			}	
+			catch(Exception $e){
+				throw new Kohana_Exception('The field: ":field" does not exist in table: ":table" and row: ":row"',array(':field' => $field,':table' => $table, ':row' => $row));
+
+			}
 
 		}
 
 		protected function _fill_range($table,$row_index = null,$field,$range = 1){
 				$total_rows = count($this->_data[$table])-1;
+
 				$row_index = rand(0,$total_rows);
+
 				if($range > 1){
 					$values = array();
 					for($i = 0; $i < $range;$i++){
 						$values[] = $this->_fetch_value($table,$row_index,$field); 
 
-						$row_index = rand(0,$total_rows);
+						$row_index = rand(1,$total_rows);
 					}
 
 					return $values;
@@ -149,7 +157,7 @@
 		 * @return mixed 
 		 */
 		public function fetch_data($field, $table = null,$range = 1){
-			$field = preg_replace('/^[a-z0-9]+\./','',$field);
+			$field = preg_replace('/^[a-z0-9]+\./','',str_replace('`','',$field));
 
 			//get the table if none is given
 			$table = $table !== null?$table:$this->fetch_table($field);
